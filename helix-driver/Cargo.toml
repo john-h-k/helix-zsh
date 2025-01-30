@@ -1,0 +1,16 @@
+[package]
+name = "helix-driver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arc-swap = "1.7.1"
+clap = { version = "4.5.27", features = ["derive"] }
+helix-core = { git = "https://github.com/john-h-k/helix.git" }
+helix-view = { git = "https://github.com/john-h-k/helix.git" }
+helix-loader = { git = "https://github.com/john-h-k/helix.git" }
+helix-term = { git = "https://github.com/john-h-k/helix.git" }
+helix-event = { git = "https://github.com/john-h-k/helix.git" }
+toml = "0.8.19"
+tokio =  { version = "1.43.0" }
+anyhow = "1.0.95"
