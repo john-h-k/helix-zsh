@@ -227,7 +227,7 @@ async fn main_impl() {
             .expect("write to stdout failed");
         stdout.write_u8(0).await.expect("write to stdout failed");
 
-        if clipboard != "" {
+        if !clipboard.is_empty() {
             stdout.write_u8(b'Y').await.expect("write to stdout failed");
             stdout
                 .write_all(clipboard.as_bytes())
@@ -237,6 +237,17 @@ async fn main_impl() {
         } else {
             stdout.write_u8(b'N').await.expect("write to stdout failed");
         }
+
+        let mode = match editor.mode {
+            helix_view::document::Mode::Normal => 'n',
+            helix_view::document::Mode::Select => 's',
+            helix_view::document::Mode::Insert => 'i',
+        };
+
+        stdout
+            .write_u8(mode as u8)
+            .await
+            .expect("write to stdout failed");
 
         stdout.flush().await.unwrap();
     }

@@ -1,29 +1,57 @@
+HELIX_ZSH="1"
+
 # global mode state
 hx_mode="insert"
 
-driver="./helix-driver/target/release/helix-driver"
+driver="helix-driver"
 
-coproc { $driver 2> driver.log } 2> /dev/null
+coproc $driver 2> /dev/null
 
-PS1=${PS1//(#m)vicmd(|[01])/hxcmd}
-PS1=${PS1//viins/hxins}
+function _add_default_bindings() {
+    bindkey -M $1 "^A"-"^C" self-insert
+    bindkey -M $1 "^D" list-choices
+    bindkey -M $1 "^E"-"^F" self-insert
+    bindkey -M $1 "^G" list-expand
+    bindkey -M $1 "^H" vi-backward-delete-char
+    bindkey -M $1 "^I" expand-or-complete
+    bindkey -M $1 "^J" accept-line
+    bindkey -M $1 "^K" self-insert
+    bindkey -M $1 "^L" clear-screen
+    bindkey -M $1 "^M" accept-line
+    bindkey -M $1 "^N"-"^P" self-insert
+    bindkey -M $1 "^Q" vi-quoted-insert
+    bindkey -M $1 "^R" redisplay
+    bindkey -M $1 "^S"-"^T" self-insert
+    bindkey -M $1 "^U" vi-kill-line
+    bindkey -M $1 "^V" vi-quoted-insert
+    bindkey -M $1 "^W" vi-backward-kill-word
+    bindkey -M $1 "^Y"-"^Z" self-insert
+    bindkey -M $1 "^[OA" up-line-or-beginning-search
+    bindkey -M $1 "^[OB" down-line-or-beginning-search
+    bindkey -M $1 "^[OC" vi-forward-char
+    bindkey -M $1 "^[OD" vi-backward-char
+    bindkey -M $1 "^[OF" end-of-line
+    bindkey -M $1 "^[OH" beginning-of-line
+    bindkey -M $1 "^[[1;5C" forward-word
+    bindkey -M $1 "^[[1;5D" backward-word
+    bindkey -M $1 "^[[200~" bracketed-paste
+    bindkey -M $1 "^[[3;5~" kill-word
+    bindkey -M $1 "^[[3~" delete-char
+    bindkey -M $1 "^[[5~" up-line-or-history
+    bindkey -M $1 "^[[6~" down-line-or-history
+    bindkey -M $1 "^[[A" up-line-or-history
+    bindkey -M $1 "^[[B" down-line-or-history
+    bindkey -M $1 "^[[C" vi-forward-char
+    bindkey -M $1 "^[[D" vi-backward-char
+    bindkey -M $1 "^[[Z" reverse-menu-complete
+}
 
-# function to call hx-zsh and update buffer
+mode=""
+hxmode=""
+
 hx_zle_widget() {
-    if [[ "$BUFFER" == "" ]]; then
-        hx_clear
-    fi
-
-    if [[ -n "$hx_paste_buffer" ]]; then
-        KEYS="$hx_paste_buffer"
-        hx_paste_buffer=""
-    fi
-
-    # local input="$BUFFER"
-    # local mark="${MARK:-0}"
-    # local cursor="$CURSOR"
-
     if [[ $KEYS == $'\r' || $KEYS == $'\n' || $KEYS == '^M' ]]; then
+        region_highlight=()
         zle accept-line
         echo -n "\n" >&p
         return
@@ -43,6 +71,8 @@ hx_zle_widget() {
         echo -n "$cb" | pbcopy
     fi
 
+    read -k 1 -u 0 new_mode <&p
+
     if (( head < anchor )); then
         start=$head
         end="$anchor"
@@ -56,43 +86,49 @@ hx_zle_widget() {
 
     region_highlight=("$start $end bg=#a9a9a9")
 
-    # local new_buffer new_cursor new_mark new_mode
-    # new_buffer=$(echo "$json_output" | jq -r '.buffer')
-    # new_cursor=$(echo "$json_output" | jq -r '.cursor')
-    # new_mark=$(echo "$json_output" | jq -r '.mark')
-    # new_mode=$(echo "$json_output" | jq -r '.mode')
+    if [[ "$new_mode" != "$mode" ]]; then
+        case $new_mode in
+            i)
+                hxmode="hxins"
+                zle -K hxins ;;
+            n)
+                hxmode="hxcmd"
+                zle -K hxcmd ;;
+            s)
+                hxmode="hxsel"
+                zle -K hxcmd ;;
+        esac
 
-    # hx_mode="$new_mode"
+        mode=$new_mode
 
-    # BUFFER="$new_buffer"
-    # CURSOR="$new_cursor"
-    # MARK="$new_mark"
-
-    zle redisplay
-}
-
-hx_clear() {
-    ctrlc=$(echo -ne "\x03")
-    echo -n $ctrlc >&p
+        zle reset-prompt
+    else
+        zle redisplay
+    fi
 }
 
 undefined-key() {
     hx_zle_widget
 }
 
-# switch to normal mode
 hx_normal_mode() {
     hx_mode="normal"
-    bindkey -A hxcmd main  # switch keymap
+    bindkey -A hxcmd main
     hx_zle_widget
 }
 
-# switch to insert mode
 hx_insert_mode() {
     hx_mode="insert"
-    bindkey -A hxins main  # switch keymap
+    bindkey -A hxins main
     hx_zle_widget
 }
+
+zle-line-init() {
+    ctrlc=$(echo -ne "\x03")
+    echo -n $ctrlc >&p
+}
+
+zle -N zle-line-init
 
 unset zle_bracketed_paste
 echo -ne "\e[?2004l"
@@ -103,13 +139,12 @@ zle -N hx_break
 zle -N undefined-key
 
 bindkey -N hxcmd
-# note: copy from viins so char insertion works
-bindkey -N hxins # viins
+bindkey -N hxins
+
+_add_default_bindings hxcmd
+_add_default_bindings hxins
 
 bindkey -M hxins '^[' hx_normal_mode  # 'esc' exits insert mode
-
-bindkey -M hxins '^C' hx_break
-bindkey -M hxcmd '^C' hx_break
 
 bindkey -M hxcmd 'i' hx_insert_mode  # 'i' enters insert mode
 
