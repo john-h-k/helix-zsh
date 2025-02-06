@@ -1,21 +1,22 @@
 # global mode state
 hx_mode="insert"
 
-driver="./helix-driver/target/debug/helix-driver"
+driver="./helix-driver/target/release/helix-driver"
 
-coproc { $driver 2> driver.log }
+coproc { $driver 2> driver.log } 2> /dev/null
 
 PS1=${PS1//(#m)vicmd(|[01])/hxcmd}
 PS1=${PS1//viins/hxins}
 
-last_pid=""
-
 # function to call hx-zsh and update buffer
 hx_zle_widget() {
-    if [[ $? -eq 130 && $! != $last_pid ]]; then
-        hx_break
-        last_pid=$!
-        return
+    if [[ "$BUFFER" == "" ]]; then
+        hx_clear
+    fi
+
+    if [[ -n "$hx_paste_buffer" ]]; then
+        KEYS="$hx_paste_buffer"
+        hx_paste_buffer=""
     fi
 
     # local input="$BUFFER"
@@ -33,8 +34,14 @@ hx_zle_widget() {
     read -k 1 -u 0 res <&p
 
     IFS= read -u 0 -d $'\C-@' text <&p
-    read -u 0 -d $'\C-@' head <&p
-    read -u 0 -d $'\C-@' anchor <&p
+    IFS= read -u 0 -d $'\C-@' head <&p
+    IFS= read -u 0 -d $'\C-@' anchor <&p
+
+    read -k 1 -u 0 c <&p
+    if [[ "$c" == "Y" ]]; then
+        IFS= read -u 0 -d $'\C-@' cb <&p
+        echo -n "$cb" | pbcopy
+    fi
 
     if (( head < anchor )); then
         start=$head
@@ -47,8 +54,7 @@ hx_zle_widget() {
     BUFFER="$text"
     CURSOR="$start"
 
-    region_highlight=("$start $end bg=#ececec,fg=#000000,bold")
-    echo $region_highlight >> reg.txt
+    region_highlight=("$start $end bg=#a9a9a9")
 
     # local new_buffer new_cursor new_mark new_mode
     # new_buffer=$(echo "$json_output" | jq -r '.buffer')
@@ -65,9 +71,8 @@ hx_zle_widget() {
     zle redisplay
 }
 
-hx_break() {
+hx_clear() {
     ctrlc=$(echo -ne "\x03")
-    BUFFER="${BUFFER}${ctrlc}"
     echo -n $ctrlc >&p
 }
 
@@ -88,6 +93,9 @@ hx_insert_mode() {
     bindkey -A hxins main  # switch keymap
     hx_zle_widget
 }
+
+unset zle_bracketed_paste
+echo -ne "\e[?2004l"
 
 zle -N hx_normal_mode
 zle -N hx_insert_mode

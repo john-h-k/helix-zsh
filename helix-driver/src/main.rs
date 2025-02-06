@@ -18,6 +18,7 @@ use helix_term::{
     ui,
 };
 use helix_view::{
+    clipboard,
     editor::Action,
     graphics::Rect,
     handlers::Handlers,
@@ -157,20 +158,23 @@ async fn main_impl() {
                 let _ = editor.close_document(id, true);
                 editor.new_file(Action::Load);
                 enter_insert_mode(&mut editor);
-            }
-
-            let ev = KeyEvent { code, modifiers };
-
-            eprintln!("{ev:?}");
-
-            let mut ctx = compositor::Context {
-                editor: &mut editor,
-                jobs,
-                scroll: None,
-            };
-
-            if let EventResult::Consumed(_) = editor_view.handle_event(&Event::Key(ev), &mut ctx) {
                 ignored = false;
+            } else {
+                let ev = KeyEvent { code, modifiers };
+
+                eprintln!("{ev:?}");
+
+                let mut ctx = compositor::Context {
+                    editor: &mut editor,
+                    jobs,
+                    scroll: None,
+                };
+
+                if let EventResult::Consumed(_) =
+                    editor_view.handle_event(&Event::Key(ev), &mut ctx)
+                {
+                    ignored = false;
+                }
             }
         }
 
@@ -181,6 +185,15 @@ async fn main_impl() {
         }
 
         stdout.write_u8(b'A').await.expect("write to stdout failed");
+
+        let reg = editor.registers.read('"', &editor);
+
+        let mut clipboard = String::new();
+        if let Some(mut reg) = reg {
+            if let Some(val) = reg.next() {
+                clipboard = val.to_string();
+            }
+        }
 
         let doc = editor.documents().next().unwrap();
         let text = doc.text().to_string();
@@ -194,8 +207,10 @@ async fn main_impl() {
 
         eprintln!("{primary:?}");
 
+        eprintln!("clipboard: '{clipboard}'");
+
         stdout
-            .write_all(&text.as_bytes()[..text.as_bytes().len() - 1])
+            .write_all(&text.as_bytes()[..text.as_bytes().len().saturating_sub(1)])
             .await
             .expect("write to stdout failed");
         stdout.write_u8(0).await.expect("write to stdout failed");
@@ -211,6 +226,17 @@ async fn main_impl() {
             .await
             .expect("write to stdout failed");
         stdout.write_u8(0).await.expect("write to stdout failed");
+
+        if clipboard != "" {
+            stdout.write_u8(b'Y').await.expect("write to stdout failed");
+            stdout
+                .write_all(clipboard.as_bytes())
+                .await
+                .expect("write to stdout failed");
+            stdout.write_u8(0).await.expect("write to stdout failed");
+        } else {
+            stdout.write_u8(b'N').await.expect("write to stdout failed");
+        }
 
         stdout.flush().await.unwrap();
     }
