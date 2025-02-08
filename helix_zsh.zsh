@@ -141,6 +141,7 @@ _hx_process() {
     if [[ "$c" == "Y" ]]; then
         IFS= read -u 0 -d $'\C-@' cb <&p
         echo -n "$cb" | pbcopy
+        echo "copied '$cb' to clipboard" >> $LOG
     fi
 
     read -k 1 -u 0 new_mode <&p

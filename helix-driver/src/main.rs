@@ -19,6 +19,7 @@ use helix_term::{
     ui::{self, EditorView},
 };
 use helix_view::{
+    clipboard,
     editor::Action,
     graphics::Rect,
     handlers::Handlers,
@@ -92,19 +93,21 @@ fn reset_editor(editor: &mut Editor, editor_view: &mut EditorView) {
     let _ = editor.close_document(id, true);
     editor.new_file(Action::Load);
 
-    // new document has a trailing newline, so delete it
+    // new document has a trailing newline, so delete it (with `"_d`)
     let mut ctx = compositor::Context {
         editor,
         jobs: &mut Jobs::new(),
         scroll: None,
     };
 
-    let ev = KeyEvent {
-        code: KeyCode::Char('d'),
-        modifiers: KeyModifiers::NONE,
-    };
+    for key in ['"', '_', 'd'] {
+        let ev = KeyEvent {
+            code: KeyCode::Char(key),
+            modifiers: KeyModifiers::NONE,
+        };
 
-    _ = editor_view.handle_event(&Event::Key(ev), &mut ctx);
+        _ = editor_view.handle_event(&Event::Key(ev), &mut ctx);
+    }
 
     enter_insert_mode(editor);
 }
@@ -138,6 +141,7 @@ async fn handle_command(
     jobs: &mut Jobs,
     stdin: &mut BufReader<Stdin>,
     stdout: &mut BufWriter<Stdout>,
+    last_cb_value: &mut Option<String>,
 ) -> Result<(), io::Error> {
     let mut ignored = true;
 
@@ -211,7 +215,10 @@ async fn handle_command(
             let mut clipboard = String::new();
             if let Some(mut reg) = reg {
                 if let Some(val) = reg.next() {
-                    clipboard = val.to_string();
+                    if last_cb_value.as_ref().is_none_or(|s| s != val.as_ref()) {
+                        clipboard = val.to_string();
+                        *last_cb_value = Some(clipboard.clone());
+                    }
                 }
             }
 
@@ -322,12 +329,15 @@ async fn main_impl() {
     reset_editor(&mut editor, &mut editor_view);
 
     loop {
+        let mut last_cb_value = None;
+
         if let Err(e) = handle_command(
             &mut editor,
             &mut editor_view,
             &mut jobs,
             &mut stdin,
             &mut stdout,
+            &mut last_cb_value,
         )
         .await
         {
