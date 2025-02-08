@@ -31,7 +31,7 @@ cargo install --path .
   }
 ```
 
-And it to your prompt elements:
+And add it to your prompt elements:
 
 ```diff
   typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(

@@ -1,7 +1,7 @@
 HELIX_ZSH="1"
 
-driver="./helix-driver/target/debug/helix-driver"
-# driver="helix-driver"
+# driver="./helix-driver/target/debug/helix-driver"
+driver="helix-driver"
 
 DRIVER_LOG="/dev/null"
 # DRIVER_LOG="./helix-driver.log"
