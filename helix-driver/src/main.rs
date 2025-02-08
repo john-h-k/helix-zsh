@@ -1,7 +1,8 @@
-use std::{any::Any, collections::HashMap, fs, sync::Arc};
+use std::{any::Any, collections::HashMap, fs, io::Read, sync::Arc};
 
+use log::{error, info, trace};
 use tokio::{
-    io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt},
+    io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, Stdin, Stdout},
     sync::mpsc::{self, Sender},
 };
 
@@ -15,7 +16,7 @@ use helix_term::{
     events::PostCommand,
     job::Jobs,
     keymap::{Keymaps, MappableCommand},
-    ui,
+    ui::{self, EditorView},
 };
 use helix_view::{
     clipboard,
@@ -67,8 +68,188 @@ fn enter_insert_mode(editor: &mut Editor) {
     });
 }
 
+fn char_to_key(ch: u8) -> KeyEvent {
+    let code;
+    let mut modifiers = KeyModifiers::NONE;
+    match ch {
+        0 => panic!("hit null char; this should be end-of-keys"),
+        27 => code = KeyCode::Esc,
+        8 => code = KeyCode::Backspace,
+        9 => code = KeyCode::Tab,
+        10 | 13 => code = KeyCode::Enter,
+        127 => code = KeyCode::Backspace,
+        1..27 => {
+            code = KeyCode::Char((b'a' + (ch - 1)) as char);
+            modifiers = KeyModifiers::CONTROL;
+        }
+        _ => code = KeyCode::Char(ch as char),
+    }
+
+    KeyEvent { code, modifiers }
+}
+
+fn reset_editor(editor: &mut Editor) {
+    let id = editor.documents().next().unwrap().id();
+    let _ = editor.close_document(id, true);
+    editor.new_file(Action::Load);
+    enter_insert_mode(editor);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+enum MessageType {
+    Keys = b'K',
+    Text = b'T',
+    Cursor = b'C',
+    Reset = b'R',
+}
+
+impl TryFrom<u8> for MessageType {
+    type Error = u8;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            b'K' => Ok(MessageType::Keys),
+            b'T' => Ok(MessageType::Text),
+            b'C' => Ok(MessageType::Cursor),
+            b'R' => Ok(MessageType::Reset),
+            _ => Err(value),
+        }
+    }
+}
+
+async fn handle_command(
+    editor: &mut Editor,
+    editor_view: &mut EditorView,
+    jobs: &mut Jobs,
+    stdin: &mut Stdin,
+    stdout: &mut BufWriter<Stdout>,
+) -> Result<(), io::Error> {
+    let mut ignored = true;
+
+    let Ok(cmd) = MessageType::try_from(stdin.read_u8().await?) else {
+        stdout.write_u8(b'E').await?;
+        stdout.write_u8(0).await?;
+        stdout.flush().await?;
+        return Ok(());
+    };
+
+    let mut inp = Vec::new();
+    loop {
+        let ch = stdin.read_u8().await?;
+
+        if ch == 0 {
+            break;
+        }
+
+        inp.push(ch);
+    }
+
+    match cmd {
+        MessageType::Reset => {
+            reset_editor(editor);
+            Ok(())
+        }
+        MessageType::Cursor => {
+            let pos = String::from_utf8(inp)
+                .expect("bad cursor pos")
+                .parse::<usize>()
+                .expect("bad cursor pos");
+
+            let views = editor.tree.views_mut().collect::<Vec<_>>();
+
+            assert!(views.len() == 1);
+            let (view, _) = &views[0];
+            let id = view.id;
+
+            let doc = editor.documents_mut().next().unwrap();
+            doc.set_selection(id, Selection::point(pos));
+
+            Ok(())
+        }
+        MessageType::Keys | MessageType::Text => {
+            // FIXME: properly push text in so it can't hit keybindings (and will insert in normal mode)
+
+            for ch in inp {
+                let mut ctx = compositor::Context {
+                    editor,
+                    jobs,
+                    scroll: None,
+                };
+
+                let ev = char_to_key(ch);
+
+                if let EventResult::Consumed(_) =
+                    editor_view.handle_event(&Event::Key(ev), &mut ctx)
+                {
+                    ignored = false;
+                }
+            }
+
+            if ignored {
+                stdout.write_u8(b'I').await?;
+                stdout.flush().await.unwrap();
+                return Ok(());
+            }
+
+            stdout.write_u8(b'A').await?;
+
+            let reg = editor.registers.read('"', editor);
+
+            let mut clipboard = String::new();
+            if let Some(mut reg) = reg {
+                if let Some(val) = reg.next() {
+                    clipboard = val.to_string();
+                }
+            }
+
+            let doc = editor.documents().next().unwrap();
+            let text = doc.text().to_string();
+            let selections = doc.selections();
+            let selection = selections.iter().next().unwrap().1;
+
+            let primary = selection.primary();
+
+            info!("'{text}'");
+            info!("{primary:?}");
+            info!("clipboard: '{clipboard}'");
+
+            let mut message = Vec::new();
+            message.extend(&text.as_bytes()[..text.as_bytes().len().saturating_sub(1)]);
+            message.push(0);
+
+            message.extend(primary.head.to_string().as_bytes());
+            message.push(0);
+
+            message.extend(primary.anchor.to_string().as_bytes());
+            message.push(0);
+
+            if !clipboard.is_empty() {
+                message.push(b'Y');
+                message.extend(clipboard.as_bytes());
+                message.push(0);
+            } else {
+                message.push(b'N');
+            }
+
+            let mode = match editor.mode {
+                helix_view::document::Mode::Normal => 'n',
+                helix_view::document::Mode::Select => 's',
+                helix_view::document::Mode::Insert => 'i',
+            };
+
+            message.push(mode as u8);
+
+            stdout.write_all(&message).await?;
+            stdout.flush().await?;
+
+            Ok(())
+        }
+    }
+}
+
 async fn main_impl() {
-    // let args = Args::parse();
+    // env_logger::init();
 
     helix_loader::initialize_config_file(None);
     helix_loader::initialize_log_file(None);
@@ -115,7 +296,7 @@ async fn main_impl() {
 
     editor.new_file(Action::VerticalSplit);
 
-    let jobs = &mut Jobs::new();
+    let mut jobs = Jobs::new();
 
     let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
         &config.keys
@@ -123,132 +304,22 @@ async fn main_impl() {
     let mut editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
 
     let mut stdin = io::stdin();
-    let mut stdout = io::stdout();
+    let mut stdout = BufWriter::new(io::stdout());
 
     enter_insert_mode(&mut editor);
 
     loop {
-        let mut ignored = true;
-
-        loop {
-            let ch = stdin.read_u8().await.expect("reading from stdin failed");
-
-            if ch == 0 {
-                break;
-            }
-
-            let code;
-            let mut modifiers = KeyModifiers::NONE;
-            match ch {
-                0 => break,
-                27 => code = KeyCode::Esc,
-                8 => code = KeyCode::Backspace,
-                9 => code = KeyCode::Tab,
-                10 | 13 => code = KeyCode::Enter,
-                127 => code = KeyCode::Backspace,
-                1..27 => {
-                    code = KeyCode::Char((b'a' + (ch - 1)) as char);
-                    modifiers = KeyModifiers::CONTROL;
-                }
-                _ => code = KeyCode::Char(ch as char),
-            }
-
-            if ch == 10 || (code == KeyCode::Char('c') && modifiers == KeyModifiers::CONTROL) {
-                let id = editor.documents().next().unwrap().id();
-                let _ = editor.close_document(id, true);
-                editor.new_file(Action::Load);
-                enter_insert_mode(&mut editor);
-                ignored = false;
-            } else {
-                let ev = KeyEvent { code, modifiers };
-
-                eprintln!("{ev:?}");
-
-                let mut ctx = compositor::Context {
-                    editor: &mut editor,
-                    jobs,
-                    scroll: None,
-                };
-
-                if let EventResult::Consumed(_) =
-                    editor_view.handle_event(&Event::Key(ev), &mut ctx)
-                {
-                    ignored = false;
-                }
-            }
-        }
-
-        if ignored {
-            stdout.write_u8(b'I').await.expect("write to stdout failed");
-            stdout.flush().await.unwrap();
+        if let Err(e) = handle_command(
+            &mut editor,
+            &mut editor_view,
+            &mut jobs,
+            &mut stdin,
+            &mut stdout,
+        )
+        .await
+        {
+            error!("{e}");
             continue;
-        }
-
-        stdout.write_u8(b'A').await.expect("write to stdout failed");
-
-        let reg = editor.registers.read('"', &editor);
-
-        let mut clipboard = String::new();
-        if let Some(mut reg) = reg {
-            if let Some(val) = reg.next() {
-                clipboard = val.to_string();
-            }
-        }
-
-        let doc = editor.documents().next().unwrap();
-        let text = doc.text().to_string();
-        let selections = doc.selections();
-        let selection = selections.iter().next().unwrap().1;
-
-        let primary = selection.primary();
-        // let cursor = primary.cursor(doc.text().into());
-
-        eprintln!("'{text}'");
-
-        eprintln!("{primary:?}");
-
-        eprintln!("clipboard: '{clipboard}'");
-
-        stdout
-            .write_all(&text.as_bytes()[..text.as_bytes().len().saturating_sub(1)])
-            .await
-            .expect("write to stdout failed");
-        stdout.write_u8(0).await.expect("write to stdout failed");
-
-        stdout
-            .write_all(primary.head.to_string().as_bytes())
-            .await
-            .expect("write to stdout failed");
-        stdout.write_u8(0).await.expect("write to stdout failed");
-
-        stdout
-            .write_all(primary.anchor.to_string().as_bytes())
-            .await
-            .expect("write to stdout failed");
-        stdout.write_u8(0).await.expect("write to stdout failed");
-
-        if !clipboard.is_empty() {
-            stdout.write_u8(b'Y').await.expect("write to stdout failed");
-            stdout
-                .write_all(clipboard.as_bytes())
-                .await
-                .expect("write to stdout failed");
-            stdout.write_u8(0).await.expect("write to stdout failed");
-        } else {
-            stdout.write_u8(b'N').await.expect("write to stdout failed");
-        }
-
-        let mode = match editor.mode {
-            helix_view::document::Mode::Normal => 'n',
-            helix_view::document::Mode::Select => 's',
-            helix_view::document::Mode::Insert => 'i',
         };
-
-        stdout
-            .write_u8(mode as u8)
-            .await
-            .expect("write to stdout failed");
-
-        stdout.flush().await.unwrap();
     }
 }
