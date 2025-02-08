@@ -1,6 +1,6 @@
 HELIX_ZSH="0"
 
-EN_LOG="1"
+EN_LOG="0"
 LOG_DIR=~/repos/helix-zsh
 
 # driver="./helix-driver/target/debug/helix-driver"
