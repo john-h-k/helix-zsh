@@ -1,15 +1,19 @@
 HELIX_ZSH="1"
 
+LOG_DIR=~/repos/helix-zsh
+
 # driver="./helix-driver/target/debug/helix-driver"
 driver="helix-driver"
 
 DRIVER_LOG="/dev/null"
-# DRIVER_LOG="./helix-driver.log"
+# DRIVER_LOG="$LOG_DIR/helix-driver.log"
+
+LOG="/dev/null"
+# LOG="$LOG_DIR/helix_zsh.log"
 
 coproc { RUST_BACKTRACE=1 RUST_LOG=trace $driver 2> $DRIVER_LOG }
 
-LOG="/dev/null"
-# LOG="./helix_zsh.log"
+echo "Started driver" >> $LOG
 
 _hx_add_default_bindings() {
     _hx_bindkey_all "^A"-"^C" self-insert
@@ -112,14 +116,13 @@ _hx_process() {
     fi
 
     if [[ "$_hx_buffer" != "$BUFFER" ]]; then
-        echo "Buffer changed; from '$_hx_buffer' -> '$BUFFER' and cursor from $CURSOR -> $_hx_cursor" >> $LOG
+        echo "Buffer changed; from '$_hx_buffer' -> '$BUFFER' and cursor from $_hx_cursor -> $CURSOR" >> $LOG
 
         _hx_driver_reset
+        _hx_driver_text "$BUFFER"
         _hx_driver_cursor "$CURSOR"
-    fi
-
-    if [[ "$_hx_cursor" != "$CURSOR" ]]; then
-        echo "Moving cursor from $CURSOR -> $_hx_cursor" >> $LOG
+    elif [[ "$_hx_cursor" != "$CURSOR" ]]; then
+        echo "Moving cursor from $_hx_cursor -> $CURSOR" >> $LOG
         _hx_driver_cursor "$CURSOR"
     fi
 
@@ -128,6 +131,10 @@ _hx_process() {
     local res text head anchor cb new_mode;
 
     read -k 1 -u 0 res <&p
+
+    if [[ "$res" == "I" ]]; then
+        return
+    fi
 
     IFS= read -u 0 -d $'\0' text <&p
     IFS= read -u 0 -d $'\0' head <&p
@@ -141,9 +148,6 @@ _hx_process() {
 
     read -k 1 -u 0 new_mode <&p
     new_mode=$(_hx_get_mode $new_mode)
-
-    # clear stdout. there shouldn't be anything here, but just in case
-    while IFS= read -t 0 -u p -r; do :; done
 
     if (( head < anchor )); then
         start=$head

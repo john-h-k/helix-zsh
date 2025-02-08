@@ -4,15 +4,8 @@ Helix bindings for zsh
 How to use:
 
 1. Clone
-2.
-```sh
-cd <REPO>
-cd helix-driver
-cargo install --path .
-```
-
-3. Setup [helix_zsh.zsh](./helix_zsh.zsh) to be `source`'d when your terminal opens
-4. Optionally, add this code to your powerlevel10k (`p10k.zsh`) file to get different characters for different modes:
+2. Run `install.sh`
+3. Optionally, add this code to your powerlevel10k (`p10k.zsh`) file to get different characters for different modes:
 
 ```sh
   function prompt_hx_mode() {
@@ -27,7 +20,7 @@ cargo install --path .
   }
 
   function instant_prompt_hx_mode() {
-    p10k segment -f 2 -t "❯"
+    p10k segment -f 76 -t "❯"
   }
 ```
 
