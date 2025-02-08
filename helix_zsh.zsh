@@ -57,26 +57,26 @@ _hx_add_default_bindings() {
 }
 
 _hx_driver_keys() {
-    print -n -- 'K' >&p
-    print -n -- "$1" >&p
-    print -n -- "\0" >&p
+    printf "%s" 'K' >&p
+    printf "%s" "$1" >&p
+    printf "\0" >&p
 }
 
 _hx_driver_text() {
-    print -n -- 'T' >&p
-    print -n -- "$1" >&p
-    print -n -- "\0" >&p
+    printf "%s" 'T' >&p
+    printf "%s" "$1" >&p
+    printf "\0" >&p
 }
 
 _hx_driver_cursor() {
-    print -n -- 'C' >&p
-    print -n -- "$1" >&p
-    print -n -- "\0" >&p
+    printf "%s" 'C' >&p
+    printf "%s" "$1" >&p
+    printf "\0" >&p
 }
 
 _hx_driver_reset() {
-    print -n -- 'R' >&p
-    print -n -- "\0" >&p
+    printf "%s" 'R' >&p
+    printf "\0" >&p
     hx_mode="hxins"
     _hx_mode="hxins"
     _hx_buffer=""
@@ -110,11 +110,7 @@ _hx_get_mode() {
 }
 
 _hx_process() {
-    echo $_hx_mode >> $LOG
-    echo $KEYS >> $LOG
-
     if [[ $_hx_mode == "hxins" && ($KEYS == $'\r' || $KEYS == $'\n' || $KEYS == '^M') ]]; then
-        echo "accepting line"
         region_highlight=()
         zle accept-line
         _hx_driver_reset
@@ -136,7 +132,7 @@ _hx_process() {
 
     local text sel cb new_mode;
 
-    IFS= read -u 0 -d $'\0' text <&p
+    IFS= read -r -u 0 -d $'\0' text <&p
 
     typeset -a sels
 
@@ -147,8 +143,8 @@ _hx_process() {
 
     read -k 1 -u 0 c <&p
     if [[ "$c" == "Y" ]]; then
-        IFS= read -u 0 -d $'\0' cb <&p
-        echo -n "$cb" | pbcopy
+        IFS= read -r -u 0 -d $'\0' cb <&p
+        printf "%s" "$cb" | pbcopy
         echo "copied '$cb' to clipboard" >> $LOG
     fi
 
@@ -255,6 +251,8 @@ _hx_add_default_bindings
 
 # explicitly binding escape prevents zle waiting for an escape sequence
 _hx_bindkey_all '^[' _hx_process
+_hx_bindkey_all '^M' _hx_process
+_hx_bindkey_all $'\r' _hx_process
 _hx_bindkey_all '^[[200~' _hx_bracketed_paste
 _hx_bindkey_all '^[[A' up-line-or-beginning-search
 _hx_bindkey_all '^[[B' down-line-or-beginning-search

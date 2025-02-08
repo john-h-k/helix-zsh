@@ -260,6 +260,7 @@ async fn handle_command(
             }
 
             trace!("Mode: {:?}", editor.mode);
+            trace!("Text: {text}");
             let mode = match editor.mode {
                 helix_view::document::Mode::Normal => 'n',
                 helix_view::document::Mode::Select => 's',
@@ -284,9 +285,9 @@ async fn main_impl() {
     let level = env::var("RUST_LOG").unwrap_or("WARN".into());
     let level = LevelFilter::from_str(&level).expect("Invalid log level '{level}'");
     env_logger::Builder::new()
-        // .filter(None, LevelFilter::Off)
-        .filter(None, level)
-        // .filter_module("helix_driver", level)
+        .filter(None, LevelFilter::Off)
+        // .filter(None, level)
+        .filter_module("helix_driver", level)
         .init();
 
     helix_loader::initialize_config_file(None);
