@@ -187,57 +187,54 @@ async fn handle_command(
                 }
             }
 
+            // not currently used
+            _ = ignored;
+
             let mut message = Vec::new();
-            if ignored {
-                message.push(b'I');
-            } else {
-                message.push(b'A');
+            let reg = editor.registers.read('"', editor);
 
-                let reg = editor.registers.read('"', editor);
-
-                let mut clipboard = String::new();
-                if let Some(mut reg) = reg {
-                    if let Some(val) = reg.next() {
-                        clipboard = val.to_string();
-                    }
+            let mut clipboard = String::new();
+            if let Some(mut reg) = reg {
+                if let Some(val) = reg.next() {
+                    clipboard = val.to_string();
                 }
-
-                let doc = editor.documents().next().unwrap();
-                let text = doc.text().to_string();
-                let selections = doc.selections();
-                let selection = selections.iter().next().unwrap().1;
-
-                let primary = selection.primary();
-
-                info!("'{text}'");
-                info!("{primary:?}");
-                info!("clipboard: '{clipboard}'");
-
-                message.extend(&text.as_bytes()[..text.as_bytes().len().saturating_sub(1)]);
-                message.push(0);
-
-                message.extend(primary.head.to_string().as_bytes());
-                message.push(0);
-
-                message.extend(primary.anchor.to_string().as_bytes());
-                message.push(0);
-
-                if !clipboard.is_empty() {
-                    message.push(b'Y');
-                    message.extend(clipboard.as_bytes());
-                    message.push(0);
-                } else {
-                    message.push(b'N');
-                }
-
-                let mode = match editor.mode {
-                    helix_view::document::Mode::Normal => 'n',
-                    helix_view::document::Mode::Select => 's',
-                    helix_view::document::Mode::Insert => 'i',
-                };
-
-                message.push(mode as u8);
             }
+
+            let doc = editor.documents().next().unwrap();
+            let text = doc.text().to_string();
+            let selections = doc.selections();
+            let selection = selections.iter().next().unwrap().1;
+
+            let primary = selection.primary();
+
+            info!("'{text}'");
+            info!("{primary:?}");
+            info!("clipboard: '{clipboard}'");
+
+            message.extend(&text.as_bytes()[..text.as_bytes().len().saturating_sub(1)]);
+            message.push(0);
+
+            message.extend(primary.head.to_string().as_bytes());
+            message.push(0);
+
+            message.extend(primary.anchor.to_string().as_bytes());
+            message.push(0);
+
+            if !clipboard.is_empty() {
+                message.push(b'Y');
+                message.extend(clipboard.as_bytes());
+                message.push(0);
+            } else {
+                message.push(b'N');
+            }
+
+            let mode = match editor.mode {
+                helix_view::document::Mode::Normal => 'n',
+                helix_view::document::Mode::Select => 's',
+                helix_view::document::Mode::Insert => 'i',
+            };
+
+            message.push(mode as u8);
 
             if cmd == MessageType::Keys {
                 stdout.write_all(&message).await?;

@@ -128,13 +128,7 @@ _hx_process() {
 
     _hx_driver_keys "$KEYS"
 
-    local res text head anchor cb new_mode;
-
-    read -k 1 -u 0 res <&p
-
-    if [[ "$res" == "I" ]]; then
-        return
-    fi
+    local text head anchor cb new_mode;
 
     IFS= read -u 0 -d $'\0' text <&p
     IFS= read -u 0 -d $'\0' head <&p
