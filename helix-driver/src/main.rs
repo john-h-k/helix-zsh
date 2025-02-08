@@ -1,8 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, env, str::FromStr, sync::Arc};
 
-use log::{error, info};
+use log::{error, info, trace, LevelFilter};
 use tokio::{
-    io::{self, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, Stdin, Stdout},
+    io::{self, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, ErrorKind, Stdin, Stdout},
     sync::mpsc::{self, Sender},
 };
 
@@ -19,7 +19,6 @@ use helix_term::{
     ui::{self, EditorView},
 };
 use helix_view::{
-    clipboard,
     editor::Action,
     graphics::Rect,
     handlers::Handlers,
@@ -93,6 +92,8 @@ fn reset_editor(editor: &mut Editor, editor_view: &mut EditorView) {
     let _ = editor.close_document(id, true);
     editor.new_file(Action::Load);
 
+    editor.enter_normal_mode();
+
     // new document has a trailing newline, so delete it (with `"_d`)
     let mut ctx = compositor::Context {
         editor,
@@ -163,6 +164,14 @@ async fn handle_command(
         inp.push(ch);
     }
 
+    if log::max_level() >= log::Level::Trace {
+        trace! {"Command: {cmd:?}"};
+        trace!(
+            "Input: {:?}",
+            inp.iter().map(|&b| b as char).collect::<Vec<_>>()
+        );
+    }
+
     match cmd {
         MessageType::Reset => {
             reset_editor(editor, editor_view);
@@ -184,6 +193,8 @@ async fn handle_command(
 
             let pos = pos.min(doc.text().len_chars());
             doc.set_selection(id, Selection::point(pos));
+
+            info!("Set cursor to {pos}");
 
             Ok(())
         }
@@ -229,10 +240,6 @@ async fn handle_command(
 
             let primary = selection.primary();
 
-            info!("'{text}'");
-            info!("{primary:?}");
-            info!("clipboard: '{clipboard}'");
-
             message.extend(text.as_bytes());
             message.push(0);
 
@@ -269,7 +276,12 @@ async fn handle_command(
 }
 
 async fn main_impl() {
-    // env_logger::init();
+    let level = env::var("RUST_LOG").unwrap_or("WARN".into());
+    let level = LevelFilter::from_str(&level).expect("Invalid log level '{level}'");
+    env_logger::Builder::new()
+        .filter(None, LevelFilter::Off)
+        .filter_module("helix_driver", level)
+        .init();
 
     helix_loader::initialize_config_file(None);
     helix_loader::initialize_log_file(None);
@@ -341,6 +353,11 @@ async fn main_impl() {
         )
         .await
         {
+            if e.kind() == ErrorKind::UnexpectedEof {
+                info!("Closing");
+                return;
+            }
+
             error!("{e}");
             continue;
         };
