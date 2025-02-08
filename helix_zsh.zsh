@@ -1,6 +1,6 @@
 HELIX_ZSH="0"
 
-EN_LOG="1"
+EN_LOG="0"
 LOG_DIR=~/repos/helix-zsh
 
 # driver="./helix-driver/target/debug/helix-driver"
@@ -158,10 +158,6 @@ _hx_process() {
     head=$sels[1]
     anchor=$sels[2]
 
-    echo $sels >> $LOG
-    echo $head >> $LOG
-    echo $anchor >> $LOG
-
     if (( head < anchor )); then
         start=$head
         end=$anchor
@@ -173,10 +169,10 @@ _hx_process() {
     BUFFER="$text"
     CURSOR="$start"
 
+    local render_regions=""
     local nsels=${#sels}
     if (( nsels > 2 )); then
-        echo "${#sels}" >> $LOG
-        echo "many sels" >> $LOG
+        render_regions="1"
     fi
 
     region_highlight=()
@@ -202,8 +198,23 @@ _hx_process() {
         zle .reset-prompt
     fi
 
-    if [[ "$_hx_mode" != "hxins" ]]; then
-        region_highlight=("$start $end bg=#a9a9a9")
+    if [[ "$_hx_mode" != "hxins" || -n $render_regions ]]; then
+        region_highlight=()
+
+        for ((i=1; i<${#sels[@]}; i+=2)); do
+            head=${sels[i]}
+            anchor=${sels[i+1]}
+
+            if (( head < anchor )); then
+                start=$head
+                end=$anchor
+            else
+                start=$anchor
+                end=$head
+            fi
+
+            region_highlight+=("$start $end bg=#a9a9a9")
+        done
     fi
 
     if [[ $BUFFER != $_hx_buffer || -n $buffer ]]; then

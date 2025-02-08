@@ -11,7 +11,7 @@ use clap::Parser;
 use helix_core::{syntax, Selection};
 use helix_term::{
     commands,
-    compositor::{self, Component, EventResult},
+    compositor::{self, Component, Compositor, EventResult},
     config::{Config, ConfigLoadError},
     events::{self, PostCommand},
     job::Jobs,
@@ -87,7 +87,7 @@ fn char_to_key(ch: u8) -> KeyEvent {
     KeyEvent { code, modifiers }
 }
 
-fn reset_editor(editor: &mut Editor, editor_view: &mut EditorView) {
+fn reset_editor(editor: &mut Editor, compositor: &mut Compositor) {
     let id = editor.documents().next().unwrap().id();
     let _ = editor.close_document(id, true);
     editor.new_file(Action::Load);
@@ -107,7 +107,7 @@ fn reset_editor(editor: &mut Editor, editor_view: &mut EditorView) {
             modifiers: KeyModifiers::NONE,
         };
 
-        _ = editor_view.handle_event(&Event::Key(ev), &mut ctx);
+        _ = compositor.handle_event(&Event::Key(ev), &mut ctx);
     }
 
     enter_insert_mode(editor);
@@ -138,7 +138,7 @@ impl TryFrom<u8> for MessageType {
 
 async fn handle_command(
     editor: &mut Editor,
-    editor_view: &mut EditorView,
+    compositor: &mut Compositor,
     jobs: &mut Jobs,
     stdin: &mut BufReader<Stdin>,
     stdout: &mut BufWriter<Stdout>,
@@ -174,7 +174,7 @@ async fn handle_command(
 
     match cmd {
         MessageType::Reset => {
-            reset_editor(editor, editor_view);
+            reset_editor(editor, compositor);
             Ok(())
         }
         MessageType::Cursor => {
@@ -212,9 +212,7 @@ async fn handle_command(
 
                 trace!("Event: {ev:?}");
 
-                if let EventResult::Consumed(_) =
-                    editor_view.handle_event(&Event::Key(ev), &mut ctx)
-                {
+                if compositor.handle_event(&Event::Key(ev), &mut ctx) {
                     ignored = false;
                 }
             }
@@ -242,13 +240,13 @@ async fn handle_command(
             message.push(0);
 
             for selection in doc.selections().values() {
-                let primary = selection.primary();
+                for range in selection.ranges() {
+                    message.extend(range.head.to_string().as_bytes());
+                    message.push(0);
 
-                message.extend(primary.head.to_string().as_bytes());
-                message.push(0);
-
-                message.extend(primary.anchor.to_string().as_bytes());
-                message.push(0);
+                    message.extend(range.anchor.to_string().as_bytes());
+                    message.push(0);
+                }
             }
 
             message.push(0);
@@ -341,19 +339,23 @@ async fn main_impl() {
     let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
         &config.keys
     }));
-    let mut editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
+
+    let editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
 
     let mut stdin = BufReader::new(io::stdin());
     let mut stdout = BufWriter::new(io::stdout());
 
-    reset_editor(&mut editor, &mut editor_view);
+    let mut compositor = Compositor::new(area);
+    compositor.push(editor_view);
+
+    reset_editor(&mut editor, &mut compositor);
 
     loop {
         let mut last_cb_value = None;
 
         if let Err(e) = handle_command(
             &mut editor,
-            &mut editor_view,
+            &mut compositor,
             &mut jobs,
             &mut stdin,
             &mut stdout,
