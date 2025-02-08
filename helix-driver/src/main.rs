@@ -13,7 +13,7 @@ use helix_term::{
     commands,
     compositor::{self, Component, EventResult},
     config::{Config, ConfigLoadError},
-    events::PostCommand,
+    events::{self, PostCommand},
     job::Jobs,
     keymap::{Keymaps, MappableCommand},
     ui::{self, EditorView},
@@ -75,7 +75,7 @@ fn char_to_key(ch: u8) -> KeyEvent {
         27 => code = KeyCode::Esc,
         8 => code = KeyCode::Backspace,
         9 => code = KeyCode::Tab,
-        10 | 13 => code = KeyCode::Enter,
+        10 | 13 | 82 => code = KeyCode::Enter,
         127 => code = KeyCode::Backspace,
         1..27 => {
             code = KeyCode::Char((b'a' + (ch - 1)) as char);
@@ -210,6 +210,8 @@ async fn handle_command(
 
                 let ev = char_to_key(ch);
 
+                trace!("Event: {ev:?}");
+
                 if let EventResult::Consumed(_) =
                     editor_view.handle_event(&Event::Key(ev), &mut ctx)
                 {
@@ -235,18 +237,20 @@ async fn handle_command(
 
             let doc = editor.documents().next().unwrap();
             let text = doc.text().to_string();
-            let selections = doc.selections();
-            let selection = selections.iter().next().unwrap().1;
-
-            let primary = selection.primary();
 
             message.extend(text.as_bytes());
             message.push(0);
 
-            message.extend(primary.head.to_string().as_bytes());
-            message.push(0);
+            for selection in doc.selections().values() {
+                let primary = selection.primary();
 
-            message.extend(primary.anchor.to_string().as_bytes());
+                message.extend(primary.head.to_string().as_bytes());
+                message.push(0);
+
+                message.extend(primary.anchor.to_string().as_bytes());
+                message.push(0);
+            }
+
             message.push(0);
 
             if !clipboard.is_empty() {
@@ -257,6 +261,7 @@ async fn handle_command(
                 message.push(b'N');
             }
 
+            trace!("Mode: {:?}", editor.mode);
             let mode = match editor.mode {
                 helix_view::document::Mode::Normal => 'n',
                 helix_view::document::Mode::Select => 's',
@@ -276,11 +281,14 @@ async fn handle_command(
 }
 
 async fn main_impl() {
+    events::register();
+
     let level = env::var("RUST_LOG").unwrap_or("WARN".into());
     let level = LevelFilter::from_str(&level).expect("Invalid log level '{level}'");
     env_logger::Builder::new()
-        .filter(None, LevelFilter::Off)
-        .filter_module("helix_driver", level)
+        // .filter(None, LevelFilter::Off)
+        .filter(None, level)
+        // .filter_module("helix_driver", level)
         .init();
 
     helix_loader::initialize_config_file(None);

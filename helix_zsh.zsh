@@ -28,7 +28,6 @@ _hx_add_default_bindings() {
     _hx_bindkey_all "^J" accept-line
     _hx_bindkey_all "^K" self-insert
     _hx_bindkey_all "^L" clear-screen
-    _hx_bindkey_all "^M" accept-line
     _hx_bindkey_all "^N"-"^P" self-insert
     _hx_bindkey_all "^Q" vi-quoted-insert
     _hx_bindkey_all "^R" redisplay
@@ -111,7 +110,11 @@ _hx_get_mode() {
 }
 
 _hx_process() {
-    if [[ $KEYS == $'\r' || $KEYS == $'\n' || $KEYS == '^M' ]]; then
+    echo $_hx_mode >> $LOG
+    echo $KEYS >> $LOG
+
+    if [[ $_hx_mode == "hxins" && ($KEYS == $'\r' || $KEYS == $'\n' || $KEYS == '^M') ]]; then
+        echo "accepting line"
         region_highlight=()
         zle accept-line
         _hx_driver_reset
@@ -131,15 +134,20 @@ _hx_process() {
 
     _hx_driver_keys "$KEYS"
 
-    local text head anchor cb new_mode;
+    local text sel cb new_mode;
 
     IFS= read -u 0 -d $'\0' text <&p
-    IFS= read -u 0 -d $'\0' head <&p
-    IFS= read -u 0 -d $'\0' anchor <&p
+
+    typeset -a sels
+
+    while IFS= read -u 0 -d $'\0' sel <&p; do
+      [[ -z "$sel" ]] && break
+      sels+=("$sel")
+    done
 
     read -k 1 -u 0 c <&p
     if [[ "$c" == "Y" ]]; then
-        IFS= read -u 0 -d $'\C-@' cb <&p
+        IFS= read -u 0 -d $'\0' cb <&p
         echo -n "$cb" | pbcopy
         echo "copied '$cb' to clipboard" >> $LOG
     fi
@@ -147,16 +155,29 @@ _hx_process() {
     read -k 1 -u 0 new_mode <&p
     new_mode=$(_hx_get_mode $new_mode)
 
+    head=$sels[1]
+    anchor=$sels[2]
+
+    echo $sels >> $LOG
+    echo $head >> $LOG
+    echo $anchor >> $LOG
+
     if (( head < anchor )); then
         start=$head
-        end="$anchor"
+        end=$anchor
     else
         start=$anchor
-        end="$head"
+        end=$head
     fi
 
     BUFFER="$text"
     CURSOR="$start"
+
+    local nsels=${#sels}
+    if (( nsels > 2 )); then
+        echo "${#sels}" >> $LOG
+        echo "many sels" >> $LOG
+    fi
 
     region_highlight=()
 
@@ -173,7 +194,7 @@ _hx_process() {
             hxsel)
                 echo "sel" >> $LOG
                 _hx_cursor_block
-                zle -K hxcmd ;;
+                zle -K hxsel ;;
         esac
 
         _hx_mode="$new_mode"
@@ -201,7 +222,7 @@ _hx_bracketed_paste() {
     
 }
 
-_hx_keymaps=("hxcmd" "hxins")
+_hx_keymaps=("hxcmd" "hxins" "hxsel")
 
 _hx_bindkey_all() {
     for keymap in $_hx_keymaps; do
