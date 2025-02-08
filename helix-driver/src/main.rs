@@ -87,9 +87,36 @@ fn char_to_key(ch: u8) -> KeyEvent {
     KeyEvent { code, modifiers }
 }
 
+fn close_other_docs(editor: &mut Editor) {
+    let doc = editor.documents().next().unwrap().id();
+    let view_id = editor
+        .tree
+        .views()
+        .find(|(v, _)| v.doc == doc)
+        .unwrap()
+        .0
+        .id;
+
+    // safety: shut any other open documents in case weird key combos open others
+    let ids = editor
+        .documents()
+        .skip(1)
+        .map(|d| d.id())
+        .collect::<Vec<_>>();
+
+    for id in ids {
+        let _ = editor.close_document(id, true);
+    }
+
+    editor.focus(view_id);
+}
+
 fn reset_editor(editor: &mut Editor, compositor: &mut Compositor) {
+    close_other_docs(editor);
+
     let id = editor.documents().next().unwrap().id();
     let _ = editor.close_document(id, true);
+
     editor.new_file(Action::Load);
 
     editor.enter_normal_mode();
@@ -285,9 +312,9 @@ async fn main_impl() {
     let level = env::var("RUST_LOG").unwrap_or("WARN".into());
     let level = LevelFilter::from_str(&level).expect("Invalid log level '{level}'");
     env_logger::Builder::new()
-        .filter(None, LevelFilter::Off)
-        // .filter(None, level)
-        .filter_module("helix_driver", level)
+        // .filter(None, LevelFilter::Off)
+        .filter(None, level)
+        // .filter_module("helix_driver", level)
         .init();
 
     helix_loader::initialize_config_file(None);
@@ -372,5 +399,7 @@ async fn main_impl() {
             error!("{e}");
             continue;
         };
+
+        close_other_docs(&mut editor);
     }
 }
