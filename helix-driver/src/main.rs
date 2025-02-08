@@ -1,8 +1,8 @@
-use std::{any::Any, collections::HashMap, fs, io::Read, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use log::{error, info, trace};
+use log::{error, info};
 use tokio::{
-    io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, Stdin, Stdout},
+    io::{self, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter, Stdin, Stdout},
     sync::mpsc::{self, Sender},
 };
 
@@ -19,7 +19,6 @@ use helix_term::{
     ui::{self, EditorView},
 };
 use helix_view::{
-    clipboard,
     editor::Action,
     graphics::Rect,
     handlers::Handlers,
@@ -122,7 +121,7 @@ async fn handle_command(
     editor: &mut Editor,
     editor_view: &mut EditorView,
     jobs: &mut Jobs,
-    stdin: &mut Stdin,
+    stdin: &mut BufReader<Stdin>,
     stdout: &mut BufWriter<Stdout>,
 ) -> Result<(), io::Error> {
     let mut ignored = true;
@@ -303,7 +302,7 @@ async fn main_impl() {
     }));
     let mut editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
 
-    let mut stdin = io::stdin();
+    let mut stdin = BufReader::new(io::stdin());
     let mut stdout = BufWriter::new(io::stdout());
 
     enter_insert_mode(&mut editor);

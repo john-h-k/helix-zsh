@@ -3,13 +3,13 @@ HELIX_ZSH="1"
 driver="./helix-driver/target/debug/helix-driver"
 # driver="helix-driver"
 
-# DRIVER_LOG="/dev/null"
-DRIVER_LOG="./helix-driver.log"
+DRIVER_LOG="/dev/null"
+# DRIVER_LOG="./helix-driver.log"
 
 coproc { RUST_BACKTRACE=1 RUST_LOG=trace $driver 2> $DRIVER_LOG }
 
-# ERR_LOG="/dev/null"
-LOG="./helix_zsh.log"
+LOG="/dev/null"
+# LOG="./helix_zsh.log"
 
 _hx_add_default_bindings() {
     _hx_bindkey_all "^A"-"^C" self-insert
@@ -73,6 +73,8 @@ _hx_driver_reset() {
     print -n -- "\0" >&p
     hx_mode="hxins"
     _hx_mode="hxins"
+    _hx_buffer=""
+    _hx_cursor=0
 }
 
 _hx_cursor_beam() {
@@ -139,6 +141,9 @@ _hx_process() {
 
     read -k 1 -u 0 new_mode <&p
     new_mode=$(_hx_get_mode $new_mode)
+
+    # clear stdout. there shouldn't be anything here, but just in case
+    while IFS= read -t 0 -u p -r; do :; done
 
     if (( head < anchor )); then
         start=$head
