@@ -1,15 +1,18 @@
 HELIX_ZSH="1"
 
+EN_LOG="0"
 LOG_DIR=~/repos/helix-zsh
 
 # driver="./helix-driver/target/debug/helix-driver"
 driver="helix-driver"
 
 DRIVER_LOG="/dev/null"
-# DRIVER_LOG="$LOG_DIR/helix-driver.log"
-
 LOG="/dev/null"
-# LOG="$LOG_DIR/helix_zsh.log"
+
+if [[ "$EN_LOG" == "1" ]]; then
+    DRIVER_LOG="$LOG_DIR/helix-driver.log"
+    LOG="$LOG_DIR/helix_zsh.log"
+fi
 
 coproc { RUST_BACKTRACE=1 RUST_LOG=trace $driver 2> $DRIVER_LOG }
 

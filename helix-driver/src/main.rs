@@ -87,10 +87,25 @@ fn char_to_key(ch: u8) -> KeyEvent {
     KeyEvent { code, modifiers }
 }
 
-fn reset_editor(editor: &mut Editor) {
+fn reset_editor(editor: &mut Editor, editor_view: &mut EditorView) {
     let id = editor.documents().next().unwrap().id();
     let _ = editor.close_document(id, true);
     editor.new_file(Action::Load);
+
+    // new document has a trailing newline, so delete it
+    let mut ctx = compositor::Context {
+        editor,
+        jobs: &mut Jobs::new(),
+        scroll: None,
+    };
+
+    let ev = KeyEvent {
+        code: KeyCode::Char('d'),
+        modifiers: KeyModifiers::NONE,
+    };
+
+    _ = editor_view.handle_event(&Event::Key(ev), &mut ctx);
+
     enter_insert_mode(editor);
 }
 
@@ -146,7 +161,7 @@ async fn handle_command(
 
     match cmd {
         MessageType::Reset => {
-            reset_editor(editor);
+            reset_editor(editor, editor_view);
             Ok(())
         }
         MessageType::Cursor => {
@@ -211,7 +226,7 @@ async fn handle_command(
             info!("{primary:?}");
             info!("clipboard: '{clipboard}'");
 
-            message.extend(&text.as_bytes()[..text.as_bytes().len().saturating_sub(1)]);
+            message.extend(text.as_bytes());
             message.push(0);
 
             message.extend(primary.head.to_string().as_bytes());
@@ -304,7 +319,7 @@ async fn main_impl() {
     let mut stdin = BufReader::new(io::stdin());
     let mut stdout = BufWriter::new(io::stdout());
 
-    enter_insert_mode(&mut editor);
+    reset_editor(&mut editor, &mut editor_view);
 
     loop {
         if let Err(e) = handle_command(
