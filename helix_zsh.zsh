@@ -1,6 +1,6 @@
 HELIX_ZSH="0"
 
-EN_LOG="0"
+EN_LOG="1"
 LOG_DIR=~/repos/helix-zsh
 
 # driver="./helix-driver/target/debug/helix-driver"
@@ -130,7 +130,7 @@ _hx_process() {
 
     _hx_driver_keys "$KEYS"
 
-    local text sel cb new_mode;
+    local text sel cb new_mode reset_prompt;
 
     IFS= read -r -u 0 -d $'\0' text <&p
 
@@ -191,7 +191,7 @@ _hx_process() {
 
         _hx_mode="$new_mode"
         hx_mode="$new_mode"
-        zle .reset-prompt
+        reset_prompt="1"
     fi
 
     if [[ "$_hx_mode" != "hxins" || -n $render_regions ]]; then
@@ -213,8 +213,10 @@ _hx_process() {
         done
     fi
 
-    if [[ $BUFFER != $_hx_buffer || -n $buffer ]]; then
+    if [[ $BUFFER != $_hx_buffer ]]; then
         zle redisplay
+    elif [[ -n $reset_prompt ]]; then
+        zle .reset-prompt
     fi
 
     _hx_buffer="$BUFFER"

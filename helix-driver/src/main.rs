@@ -75,7 +75,7 @@ fn char_to_key(ch: u8) -> KeyEvent {
         27 => code = KeyCode::Esc,
         8 => code = KeyCode::Backspace,
         9 => code = KeyCode::Tab,
-        10 | 13 | 82 => code = KeyCode::Enter,
+        10 | 13 => code = KeyCode::Enter,
         127 => code = KeyCode::Backspace,
         1..27 => {
             code = KeyCode::Char((b'a' + (ch - 1)) as char);
