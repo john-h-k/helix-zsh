@@ -1,6 +1,6 @@
 HELIX_ZSH="0"
 
-EN_LOG="1"
+EN_LOG="0"
 LOG_DIR=~/repos/helix-zsh/logs
 
 # driver="./helix-driver/target/debug/helix-driver"
@@ -20,7 +20,14 @@ else
     if [[ "$EN_LOG" == "1" ]]; then
         DRIVER_LOG="$LOG_DIR/helix-driver.log"
         LOG="$LOG_DIR/helix_zsh.log"
+
+        mkdir -p $DRIVER_LOG
+        mkdir -p $LOG
     fi
+
+    _hx_driver() {
+        RUST_BACKTRACE=1 RUST_LOG=trace $driver 2>> $DRIVER_LOG
+    }
 
     _hx_ensure_driver() {
         echo "Ensuring driver" >> $LOG
@@ -29,7 +36,7 @@ else
             return
         fi
 
-        coproc { RUST_BACKTRACE=1 RUST_LOG=trace $driver 2>> $DRIVER_LOG }
+        coproc _hx_driver
         _hx_driver_pid=$!
 
         echo "Started driver pid=$_hx_driver_pid" >> $LOG
@@ -38,8 +45,8 @@ else
     _hx_ensure_driver
 
     _hx_kill_driver() {
-        echo "Killing driver pid=$DRIVER_PID"
-        kill $_hx_driver_pid 2>/dev/null 
+        echo "Killing driver pid=$_hx_driver_pid" >> $LOG
+        kill $_hx_driver_pid >/dev/null 2>&1
     }
 
     # if exit was previously overriden, save it into `_hx_exit`, else just have `_hx_exit` call builtin
