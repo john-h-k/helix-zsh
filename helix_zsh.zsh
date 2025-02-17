@@ -1,7 +1,7 @@
 HELIX_ZSH="0"
 
 EN_LOG="1"
-LOG_DIR=~/repos/helix-zsh
+LOG_DIR=~/repos/helix-zsh/logs
 
 # driver="./helix-driver/target/debug/helix-driver"
 driver="helix-driver"
@@ -12,8 +12,6 @@ if ! [[ -f $driver || -x $driver || -n ${(z)driver} ]]; then
     echo "Could not find helix-driver, is it installed?"
     echo "\n\n\n\n"
 else
-    autoload -Uz add-zsh-hook
-
     typeset -g _hx_driver_pid
 
     DRIVER_LOG="/dev/null"
@@ -25,6 +23,8 @@ else
     fi
 
     _hx_ensure_driver() {
+        echo "Ensuring driver" >> $LOG
+
         if ps -p $_hx_driver_pid > /dev/null 2>&1; then
             return
         fi
@@ -150,6 +150,8 @@ else
     }
 
     _hx_process() {
+        _hx_ensure_driver
+
         if [[ $_hx_mode == "hxins" && ($KEYS == $'\r' || $KEYS == $'\n' || $KEYS == '^M') ]]; then
             region_highlight=()
             zle accept-line

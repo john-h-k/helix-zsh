@@ -378,9 +378,8 @@ async fn main_impl() {
 
     reset_editor(&mut editor, &mut compositor);
 
+    let mut last_cb_value = None;
     loop {
-        let mut last_cb_value = None;
-
         if let Err(e) = handle_command(
             &mut editor,
             &mut compositor,
