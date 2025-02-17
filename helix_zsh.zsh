@@ -24,10 +24,18 @@ else
         LOG="$LOG_DIR/helix_zsh.log"
     fi
 
-    coproc { RUST_BACKTRACE=1 RUST_LOG=trace $driver 2>> $DRIVER_LOG }
-    _hx_driver_pid=$!
+    _hx_ensure_driver() {
+        if ps -p $_hx_driver_pid > /dev/null 2>&1; then
+            return
+        fi
 
-    echo "Started driver pid=$_hx_driver_pid" >> $LOG
+        coproc { RUST_BACKTRACE=1 RUST_LOG=trace $driver 2>> $DRIVER_LOG }
+        _hx_driver_pid=$!
+
+        echo "Started driver pid=$_hx_driver_pid" >> $LOG
+    }
+
+    _hx_ensure_driver
 
     _hx_kill_driver() {
         echo "Killing driver pid=$DRIVER_PID"
@@ -274,6 +282,7 @@ else
     zle -N _hx_process
     zle -N _hx_bracketed_paste
     zle -N undefined-key _hx_process
+    zle -N zle-line-init _hx_ensure_driver
 
     echo -ne '\e[?2004h'
 
