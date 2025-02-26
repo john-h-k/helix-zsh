@@ -241,6 +241,8 @@ else
             _hx_mode="$new_mode"
             hx_mode="$new_mode"
             reset_prompt="1"
+        else
+            reset_prompt=""
         fi
 
         if [[ "$_hx_mode" != "hxins" || -n $render_regions ]]; then

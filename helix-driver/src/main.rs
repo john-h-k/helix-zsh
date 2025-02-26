@@ -11,17 +11,17 @@ use clap::Parser;
 use helix_core::{syntax, Selection};
 use helix_term::{
     commands,
-    compositor::{self, Component, Compositor, EventResult},
+    compositor::{self, Compositor},
     config::{Config, ConfigLoadError},
     events::{self, PostCommand},
     job::Jobs,
     keymap::{Keymaps, MappableCommand},
-    ui::{self, EditorView},
+    ui,
 };
 use helix_view::{
     editor::Action,
     graphics::Rect,
-    handlers::Handlers,
+    handlers::{completion::CompletionHandler, Handlers},
     input::{Event, KeyCode, KeyEvent, KeyModifiers},
     theme, Editor,
 };
@@ -345,7 +345,7 @@ async fn main_impl() {
     let config = Arc::new(ArcSwap::from_pointee(config));
 
     let handlers = Handlers {
-        completions: null_handler(),
+        completions: CompletionHandler::new(null_handler()),
         signature_hints: null_handler(),
         auto_save: null_handler(),
     };
