@@ -1,12 +1,16 @@
 HELIX_ZSH="0"
 
-EN_LOG="0"
-LOG_DIR=~/repos/helix-zsh/logs
+HELIX_ZSH_EN_LOG="0"
+HELIX_ZSH_LOG_DIR=~/repos/helix-zsh/logs
 
-# driver="./helix-driver/target/debug/helix-driver"
-driver="helix-driver"
+# _helix_zsh_driver="./helix-driver/target/debug/helix-driver"
+_helix_zsh_driver="helix-driver"
 
-if ! [[ -f $driver || -x $driver || -n ${(z)driver} ]]; then
+_hx_driver_exists() {
+    [[ -f $_helix_zsh_driver || -x $_helix_zsh_driver || -n "${(z)_helix_zsh_driver}" ]]
+}
+
+if ! _hx_driver_exists; then
     # the newlines prevent this text being hidden by prompts
     echo "\n\n\n\n"
     echo "Could not find helix-driver, is it installed?"
@@ -14,38 +18,45 @@ if ! [[ -f $driver || -x $driver || -n ${(z)driver} ]]; then
 else
     typeset -g _hx_driver_pid
 
-    DRIVER_LOG="/dev/null"
-    LOG="/dev/null"
+    HELIX_ZSH_DRIVER_LOG="/dev/null"
+    HELIX_ZSH_LOG="/dev/null"
 
-    if [[ "$EN_LOG" == "1" ]]; then
-        DRIVER_LOG="$LOG_DIR/helix-driver.log"
-        LOG="$LOG_DIR/helix_zsh.log"
+    if [[ "$HELIX_ZSH_EN_LOG" == "1" ]]; then
+        HELIX_ZSH_DRIVER_LOG="$HELIX_ZSH_LOG_DIR/helix-driver.log"
+        HELIX_ZSH_LOG="$HELIX_ZSH_LOG_DIR/helix_zsh.log"
 
-        mkdir -p $DRIVER_LOG
-        mkdir -p $LOG
+        mkdir -p $HELIX_ZSH_DRIVER_LOG
+        mkdir -p $HELIX_ZSH_LOG
     fi
 
     _hx_driver() {
-        RUST_BACKTRACE=1 RUST_LOG=trace $driver 2>> $DRIVER_LOG
+        RUST_BACKTRACE=1 RUST_LOG=trace $_helix_zsh_driver 2>> $HELIX_ZSH_DRIVER_LOG
     }
 
     _hx_ensure_driver() {
-        echo "Ensuring driver" >> $LOG
+        echo "Ensuring driver" >> $HELIX_ZSH_LOG
 
         if ps -p $_hx_driver_pid > /dev/null 2>&1; then
             return
         fi
 
+        if ! _hx_driver_exists; then
+            # hx driver has suddenly vanished
+            # reset to default state and back out
+            bindkey -d
+            return 1
+        fi
+
         coproc _hx_driver
         _hx_driver_pid=$!
 
-        echo "Started driver pid=$_hx_driver_pid" >> $LOG
+        echo "Started driver pid=$_hx_driver_pid" >> $HELIX_ZSH_LOG
     }
 
     _hx_ensure_driver
 
     _hx_kill_driver() {
-        echo "Killing driver pid=$_hx_driver_pid" >> $LOG
+        echo "Killing driver pid=$_hx_driver_pid" >> $HELIX_ZSH_LOG
         kill $_hx_driver_pid >/dev/null 2>&1
     }
 
@@ -167,13 +178,13 @@ else
         fi
 
         if [[ "$_hx_buffer" != "$BUFFER" ]]; then
-            echo "Buffer changed; from '$_hx_buffer' -> '$BUFFER' and cursor from $_hx_cursor -> $CURSOR" >> $LOG
+            echo "Buffer changed; from '$_hx_buffer' -> '$BUFFER' and cursor from $_hx_cursor -> $CURSOR" >> $HELIX_ZSH_LOG
 
             _hx_driver_reset
             _hx_driver_text "$BUFFER"
             _hx_driver_cursor "$CURSOR"
         elif [[ "$_hx_cursor" != "$CURSOR" ]]; then
-            echo "Moving cursor from $_hx_cursor -> $CURSOR" >> $LOG
+            echo "Moving cursor from $_hx_cursor -> $CURSOR" >> $HELIX_ZSH_LOG
             _hx_driver_cursor "$CURSOR"
         fi
 
@@ -194,7 +205,7 @@ else
         if [[ "$c" == "Y" ]]; then
             IFS= read -r -u 0 -d $'\0' cb <&p
             printf "%s" "$cb" | pbcopy
-            echo "copied '$cb' to clipboard" >> $LOG
+            echo "copied '$cb' to clipboard" >> $HELIX_ZSH_LOG
         fi
 
         read -k 1 -u 0 new_mode <&p
@@ -225,15 +236,15 @@ else
         if [[ "$new_mode" != "$_hx_mode" ]]; then
             case "$new_mode" in
                 hxins)
-                    echo "hxins" >> $LOG
+                    echo "hxins" >> $HELIX_ZSH_LOG
                     _hx_cursor_beam
                     zle -K hxins ;;
                 hxcmd)
-                    echo "cmd" >> $LOG
+                    echo "cmd" >> $HELIX_ZSH_LOG
                     _hx_cursor_block
                     zle -K hxcmd ;;
                 hxsel)
-                    echo "sel" >> $LOG
+                    echo "sel" >> $HELIX_ZSH_LOG
                     _hx_cursor_block
                     zle -K hxsel ;;
             esac
