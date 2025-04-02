@@ -4,6 +4,8 @@ Helix bindings for zsh.
 
 ZSH contains in-built vim/emacs style bindings, and this repo is built to provide the same experience with Helix bindings. 
 
+![Example usage](./assets/example.gif)
+
 Requirements:
 
 * Rust toolchain
