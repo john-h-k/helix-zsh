@@ -21,7 +21,7 @@ It has two components:
 * [`helix_zsh.zsh`](helix_zsh.zsh)
   - This script creates the keymaps and handles input/output via the driver
 * [helix-driver](helix-driver)
-  - This is a rust program which spins up a hidden instance of Helix to
+  - This is a rust program which spins up a hidden instance of Helix
   - This is a different approach to other shell bindings (e.g `zsh-vi-mode`), but it means:
     - Your helix config file is respected
     - Updates to helix just require a driver rebuild rather than adding new mappings
