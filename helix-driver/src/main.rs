@@ -48,7 +48,7 @@ fn null_handler<T>() -> Sender<T> {
 async fn main() -> ExitCode {
     let args = env::args().collect::<Vec<_>>();
 
-    match args.first().map(|s| s.as_str()) {
+    match args.get(1).map(|s| s.as_str()) {
         Some("version") if args.len() == 1 => {
             println!("helix-driver");
             println!("{}", env!("CARGO_PKG_VERSION"));
