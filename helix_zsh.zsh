@@ -16,7 +16,7 @@ _hx_driver_exists() {
 if ! _hx_driver_exists; then
     # the newlines prevent this text being hidden by prompts
 
-    tput setaf1
+    tput setaf 1
     tput bold
     
     echo "\n\n\n\n"
@@ -52,6 +52,15 @@ else
         if ! _hx_driver_exists; then
             # hx driver has suddenly vanished
             # reset to default state and back out
+            tput setaf 1
+            tput bold
+    
+            echo "\n\n\n\n"
+            echo "helix-driver has disappeared, reverting to default keybindings"
+            echo "\n\n\n\n"
+
+            tput sgr0
+
             bindkey -d
             return 1
         fi
