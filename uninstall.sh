@@ -1,9 +1,9 @@
 #!/bin/zsh
 
-# in order to load "$ZSH_CUSTOM"
-source ~/.zshrc
-
-set -e
+if [[ "$ZSH_EVAL_CONTEXT" != *:file ]]; then
+  echo "This script must be sourced, not executed."
+  return 1 2>/dev/null || exit 1
+fi
 
 echo "Uninstalling driver..."
 
