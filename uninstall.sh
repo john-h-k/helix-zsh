@@ -15,6 +15,7 @@ if [ -n "$ZSH_CUSTOM" ]; then
     echo "Uninstalling zsh plugin..."
     rm -rf "$ZSH_CUSTOM/plugins/helix-zsh"
 
+    omz plugin disable helix-zsh
     echo "Uninstalled from '$ZSH_CUSTOM/plugins/helix-zsh'"
 else
     echo "The driver is uninstalled and helix-zsh will not run"

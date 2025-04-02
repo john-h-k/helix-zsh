@@ -51,10 +51,22 @@ hx-zsh() {
         echo "    --driver "
         echo "        Show driver information"
         echo ""
+        echo "    -h,--help "
+        echo "        Show help"
+        echo ""
     }
 
     if [[ $# == 0 ]]; then
-        _hx-zsh-help
+        echo "hx-zsh"
+        echo "John Kelly <johnharrykelly@gmail.com>"
+        echo ""
+        if [[ "$HELIX_ZSH" == "1" ]]; then
+            echo "Status: enabled"
+        else
+            echo "Status: disabled (likely could not find driver)"
+        fi
+        echo ""
+
         return
     fi
 
@@ -63,7 +75,7 @@ hx-zsh() {
             _hx-zsh-help
             return
             ;;
-        -e,--enabled)
+        -e|--enabled)
             return [[ "$HELIX_ZSH" == "1" ]]
             ;;
         --driver)

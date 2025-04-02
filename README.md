@@ -44,6 +44,9 @@ How to use:
 > The installer will add the plugin if oh-my-zsh is used for plugin management
 > If not, you must manually place [`helix_zsh.zsh`](helix_zsh.zsh) somewhere and `source <LOCATION>` in your `.zshrc`
 
+> [!NOTE]
+> Install can be a touch slow as it has to build helix itself
+
 1. Clone
 2. Run `install.sh`
 3. Ensure 
