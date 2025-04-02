@@ -7,7 +7,7 @@ HELIX_ZSH_LOG_DIR=~/repos/helix-zsh/logs
 _helix_zsh_driver="helix-driver"
 
 _hx_driver_exists() {
-    [[ -f $_helix_zsh_driver || -x $_helix_zsh_driver || -n "${(z)_helix_zsh_driver}" ]]
+    [[ -f $_helix_zsh_driver || -x $_helix_zsh_driver ]]
 }
 
 if ! _hx_driver_exists; then
