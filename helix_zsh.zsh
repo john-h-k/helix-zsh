@@ -13,7 +13,11 @@ _hx_driver_exists() {
     [[ -f $_helix_zsh_driver ]] || ( ! [[ -d $_helix_zsh_driver ]] && [[ -x $_helix_zsh_driver ]] )
 }
 
-if ! _hx_driver_exists; then
+_helix_zsh_failed=""
+
+if [[ -n "$_helix_zsh_failed" ]] || ! _hx_driver_exists; then
+    _helix_zsh_failed="1"
+
     # the newlines prevent this text being hidden by prompts
 
     tput setaf 1
