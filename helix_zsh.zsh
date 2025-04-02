@@ -7,7 +7,10 @@ HELIX_ZSH_LOG_DIR=~/repos/helix-zsh/logs
 _helix_zsh_driver="helix-driver"
 
 _hx_driver_exists() {
-    [[ -f $_helix_zsh_driver || -x $_helix_zsh_driver ]]
+    # because of auto-cd (i think) where typing `foo` navigates into `foo`
+    # `[[ -x foo ]]` will return true
+    # so ensure it is not a directory
+    [[ -f $_helix_zsh_driver ]] || ( ! [[ -d $_helix_zsh_driver ]] && [[ -x $_helix_zsh_driver ]] )
 }
 
 if ! _hx_driver_exists; then
