@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, str::FromStr, sync::Arc};
+use std::{collections::HashMap, env, process::ExitCode, str::FromStr, sync::Arc};
 
 use log::{error, info, trace, LevelFilter};
 use tokio::{
@@ -45,8 +45,21 @@ fn null_handler<T>() -> Sender<T> {
 }
 
 #[tokio::main]
-async fn main() {
-    main_impl().await;
+async fn main() -> ExitCode {
+    let args = env::args().collect::<Vec<_>>();
+
+    match args.first().map(|s| s.as_str()) {
+        Some("version") if args.len() == 1 => {
+            println!("helix-driver");
+            println!("{}", env!("CARGO_PKG_VERSION"));
+            ExitCode::SUCCESS
+        }
+        None => {
+            main_impl().await;
+            ExitCode::SUCCESS
+        }
+        _ => panic!("unrecognised args {args:?}"),
+    }
 }
 
 fn enter_insert_mode(editor: &mut Editor) {

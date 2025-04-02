@@ -5,12 +5,80 @@ HELIX_ZSH_LOG_DIR=~/repos/helix-zsh/logs
 
 # _helix_zsh_driver="./helix-driver/target/debug/helix-driver"
 _helix_zsh_driver="helix-driver"
+_helix_zsh_driver_path=""
+_helix_zsh_driver_ver=""
 
 _hx_driver_exists() {
-    # because of auto-cd (i think) where typing `foo` navigates into `foo`
-    # `[[ -x foo ]]` will return true
-    # so ensure it is not a directory
-    [[ -f $_helix_zsh_driver ]] || ( ! [[ -d $_helix_zsh_driver ]] && [[ -x $_helix_zsh_driver ]] )
+    # check it exists
+    [[ -f $_helix_zsh_driver ]] && ! command -v $_helix_zsh_driver &> /dev/null || return 1
+
+    # now check it is what we expect
+    local name ver
+    { read -r name && read -r ver; } < <($_helix_zsh_driver version) || return 1
+
+    if [[ "$name" == "helix-driver" ]]; then
+        _helix_zsh_driver_ver="$ver"
+        return 0;
+    else
+        return 1
+    fi
+}
+
+_hx_driver_info() {
+    _hx_driver_exists || return 1
+
+    if [[ "$(whence -w $_helix_zsh_driver)" == *function* ]]; then
+        _helix_zsh_driver_path="(zsh function)"
+    else
+        _helix_zsh_driver_path=$(command -v $_helix_zsh_driver)
+    fi
+}
+
+hx-zsh() {
+    # TODO: flesh this out
+
+    _hx-zsh-help() {
+        echo "helix-zsh bindings"
+        echo "John Kelly <johnharrykelly@gmail.com>"
+        echo ""
+        echo "hx-zsh [OPTIONS]"
+        echo ""
+        echo "OPTIONS:"
+        echo ""
+        echo "    --driver "
+        echo "        Show driver information"
+        echo ""
+    }
+
+    if [[ $# == 0 ]]; then
+        _hx-zsh-help
+        return
+    fi
+
+    case "$1" in
+        --help|-h|help)
+            _hx-zsh-help
+            return
+            ;;
+        --driver)
+            if ! _hx_driver_info; then
+                echo "Driver could not be found!"
+            else
+                echo "Driver: "
+                echo "  command:  $_helix_zsh_driver"
+                echo "  path:     $_helix_zsh_driver_path"
+                echo "  version:  $_helix_zsh_driver_ver"
+            fi
+            ;;
+        *)
+            tput setaf 1
+            tput bold
+
+            echo "Unrecognised argument '$1'"
+
+            tput sgr0
+            ;;
+    esac
 }
 
 _helix_zsh_failed=""
