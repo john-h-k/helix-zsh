@@ -7,9 +7,7 @@ fi
 
 echo "Installing driver..."
 
-cd helix-driver
-cargo install --path .
-cd ..
+cargo install --path "$(dirname "$0")/helix-driver"
 
 echo "Driver installed"
 
@@ -19,9 +17,8 @@ if [ -n "$ZSH_CUSTOM" ]; then
 
     cp helix_zsh.zsh "$ZSH_CUSTOM/plugins/helix-zsh/helix-zsh.plugin.zsh"
 
-    # we can't auto install it because `omz plugin enable`
     omz plugin enable helix-zsh
-    echo "Installed as zsh plugin 'helix-zsh'. Run 'omz plugin enable helix-zsh' to enable"
+    echo "Installed as zsh plugin 'helix-zsh'"
 else
     echo "The '\$ZSH_CUSTOM' variable could not be found"
     echo "Manually place the 'helix_zsh.zsh' file where you would like it, and 'source <PATH>' it within your '.zshrc' file"

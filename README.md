@@ -32,6 +32,7 @@ It has two components:
 * Use of `coproc` causes process-id to flash on screen when driver starts
   - I haven't found a way to suppress this or a better alternative. Would love to find one
   - In certain scenarios, `terminated  _hx_driver` will show for the same reason (it is then automatically restarted)
+* Autocomplete menu for some tools fails
 
 All the shell scripts bits should be namespaced enough to prevent any problems.
 Please open an issue if you find any other bugs.
@@ -48,9 +49,14 @@ How to use:
 > Install can be a touch slow as it has to build helix itself
 
 1. Clone
-2. Run `install.sh`
-3. Ensure 
-4. Optionally, add this code to your powerlevel10k (`p10k.zsh`) file to get different characters for different modes:
+2. Run `source install.sh`
+
+This should be enough for everything to work, but if it doesn't, reload your shell.
+You can do a quick check by typing `foo`, then your 'enter-normal-mode' key, then `b`, and you should see `foo` be highlighted as it would if you made this movement in Helix.
+
+The `hx-zsh` function can be used to check info about the plugin. Run `hx-zsh --help` for more details.
+
+4. Optionally, if you use powerlevel10k, add this code to your powerlevel10k (`p10k.zsh`) file to get different characters for different modes:
 
 ```sh
   function prompt_hx_mode() {
@@ -93,6 +99,6 @@ To disable:
 
 To uninstall:
 
-* [`uninstall.sh`](uninstall.sh) can be used, which simply
+* Run `source uninstall.sh`, which will
   - `cargo uninstall`'s the driver
   - Removes the zsh plugin if it can
