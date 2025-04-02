@@ -1,4 +1,4 @@
-HELIX_ZSH="0"
+HELIX_ZSH="1"
 
 HELIX_ZSH_EN_LOG="0"
 HELIX_ZSH_LOG_DIR=~/repos/helix-zsh/logs
@@ -12,9 +12,15 @@ _hx_driver_exists() {
 
 if ! _hx_driver_exists; then
     # the newlines prevent this text being hidden by prompts
+
+    tput setaf1
+    tput bold
+    
     echo "\n\n\n\n"
-    echo "Could not find helix-driver, is it installed?"
+    echo "helix-zsh enabled but could not find helix-driver, is it installed?"
     echo "\n\n\n\n"
+
+    tput sgr0
 else
     typeset -g _hx_driver_pid
 
