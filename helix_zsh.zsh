@@ -1,4 +1,4 @@
-HELIX_ZSH="1"
+HELIX_ZSH=""
 
 HELIX_ZSH_EN_LOG="0"
 HELIX_ZSH_LOG_DIR=~/repos/helix-zsh/logs
@@ -10,7 +10,7 @@ _helix_zsh_driver_ver=""
 
 _hx_driver_exists() {
     # check it exists
-    [[ -f $_helix_zsh_driver ]] && ! command -v $_helix_zsh_driver &> /dev/null || return 1
+    [[ -f $_helix_zsh_driver ]] || command -v $_helix_zsh_driver &> /dev/null || return 1
 
     # now check it is what we expect
     local name ver
@@ -45,6 +45,9 @@ hx-zsh() {
         echo ""
         echo "OPTIONS:"
         echo ""
+        echo "    -e,--enabled "
+        echo "        Succeed if hx-zsh is enabled"
+        echo ""
         echo "    --driver "
         echo "        Show driver information"
         echo ""
@@ -59,6 +62,9 @@ hx-zsh() {
         --help|-h|help)
             _hx-zsh-help
             return
+            ;;
+        -e,--enabled)
+            return [[ "$HELIX_ZSH" == "1" ]]
             ;;
         --driver)
             if ! _hx_driver_info; then
@@ -97,6 +103,8 @@ if [[ -n "$_helix_zsh_failed" ]] || ! _hx_driver_exists; then
 
     tput sgr0
 else
+    HELIX_ZSH="1"
+
     typeset -g _hx_driver_pid
 
     HELIX_ZSH_DRIVER_LOG="/dev/null"
@@ -124,6 +132,8 @@ else
         if ! _hx_driver_exists; then
             # hx driver has suddenly vanished
             # reset to default state and back out
+            HELIX_ZSH="0"
+
             tput setaf 1
             tput bold
     
