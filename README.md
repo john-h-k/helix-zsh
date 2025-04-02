@@ -12,7 +12,7 @@ Requirements:
   - Needed to build and install the driver
 * Zsh
   - ...
-* [Optional] (oh-my-zsh)(https://ohmyz.sh)
+* [Optional] [oh-my-zsh](https://ohmyz.sh)
   - Install script will automatically configure it as a plugin
 
 
