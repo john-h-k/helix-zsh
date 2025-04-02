@@ -34,6 +34,7 @@ It has two components:
 * Use of `coproc` causes process-id to flash on screen when driver starts
   - I haven't found a way to suppress this or a better alternative. Would love to find one
   - In certain scenarios, `terminated  _hx_driver` will show for the same reason (it is then automatically restarted)
+  - These are purely visual problems and don't affect functionality
 * Autocomplete menu for some tools fails
 
 All the shell scripts bits should be namespaced enough to prevent any problems.
