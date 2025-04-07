@@ -2,7 +2,7 @@
 
 Helix bindings for zsh.
 
-ZSH contains in-built vim/emacs style bindings, and this repo is built to provide the same experience with Helix bindings. 
+ZSH contains in-built vim/emacs style bindings, and this repo is built to provide the same experience with Helix bindings. Unlike other implementations,it respects your Helix config, custom keybindings, and automatically incorporates new Helix features.
 
 ![Example usage](./assets/example.gif)
 
@@ -39,6 +39,13 @@ It has two components:
 
 All the shell scripts bits should be namespaced enough to prevent any problems.
 Please open an issue if you find any other bugs.
+
+Note on terminal usability:
+
+`hx-zsh` _should_ automagically terminate itself and revert back to defaults when any glitches occur (driver vanishes, driver can't be executed, etc). I've been using it for a few months and never hit an issue that prevents all input to the terminal. If it does not, and this leaves the terminal in a weird state, this is a bug and opening an issue for it would be greatly appreciated. In the unlikely scenario it happens to you, there are a few ways to try and reset things:
+
+* If you can input any characters, deleting the helix-driver executable and reloading the shell should cause it to auto-disable
+* If you cannot, then using another editor/tool to disable where you `source` the plugin is the best bet
 
 # Installing & using
 
@@ -102,6 +109,6 @@ To disable:
 
 To uninstall:
 
-* Run `source uninstall.sh`, which will
+* Run `source uninstall.sh`, which
   - `cargo uninstall`'s the driver
   - Removes the zsh plugin if it can
