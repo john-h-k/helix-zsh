@@ -12,7 +12,7 @@ helix-loader = { git = "https://github.com/john-h-k/helix.git" }
 helix-term = { git = "https://github.com/john-h-k/helix.git" }
 helix-event = { git = "https://github.com/john-h-k/helix.git" }
 toml = "0.8.19"
-tokio =  { version = "1.43.0", features = ["io-util"] }
+tokio =  { version = "1.43.1", features = ["io-util"] }
 anyhow = "1.0.95"
 env_logger = "0.11.6"
 log = "0.4.25"
