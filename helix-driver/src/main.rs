@@ -157,6 +157,7 @@ fn reset_editor(editor: &mut Editor, compositor: &mut Compositor) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 enum MessageType {
+    Heartbeat = b'H',
     Keys = b'K',
     Text = b'T',
     Cursor = b'C',
@@ -168,6 +169,7 @@ impl TryFrom<u8> for MessageType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
+            b'H' => Ok(MessageType::Heartbeat),
             b'K' => Ok(MessageType::Keys),
             b'T' => Ok(MessageType::Text),
             b'C' => Ok(MessageType::Cursor),
@@ -214,6 +216,12 @@ async fn handle_command(
     }
 
     match cmd {
+        MessageType::Heartbeat => {
+            stdout.write_u8(b'1').await.expect("write_u8 failed!");
+            stdout.write_u8(0).await.expect("write_u8 failed!");
+            stdout.flush().await.expect("flush failed");
+            Ok(())
+        }
         MessageType::Reset => {
             reset_editor(editor, compositor);
             Ok(())
@@ -361,6 +369,7 @@ async fn main_impl() {
     let handlers = Handlers {
         completions: CompletionHandler::new(null_handler()),
         signature_hints: null_handler(),
+        document_colors: null_handler(),
         auto_save: null_handler(),
     };
 

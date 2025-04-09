@@ -61,6 +61,14 @@ How to use:
 1. Clone
 2. Run `source install.sh`
 
+If you wish to use a custom repo of helix, set the `HELIX_ZSH_HELIX_REPO_USER` variable to the github username of the repo before install. For example, I use:
+
+```zsh
+HELIX_ZSH_HELIX_REPO_USER="john-h-k" source install.sh
+```
+
+to install against my fork of helix.
+
 This should be enough for everything to work, but if it doesn't, reload your shell.
 You can do a quick check by typing `foo`, then your 'enter-normal-mode' key, then `b`, and you should see `foo` be highlighted as it would if you made this movement in Helix.
 
