@@ -350,7 +350,7 @@ async fn main_impl() {
     };
 
     let theme_loader = theme::Loader::new(&[]);
-    let syn_loader = syntax::Loader::new(syntax::Configuration {
+    let syn_loader = syntax::Loader::new(crate::syntax::config::Configuration {
         language: Vec::new(),
         language_server: HashMap::new(),
     })
