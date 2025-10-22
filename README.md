@@ -6,6 +6,9 @@ ZSH contains in-built vim/emacs style bindings, and this repo is built to provid
 
 ![Example usage](./assets/example.gif)
 
+> [!WARNING]
+> This is intentionally not tied to a helix version so that it keeps updating. This means it will occasionally break when various Helix config structs change. If this occurs, feel free to open a PR that fixes it (often it is just a 1 or 2 line change), or open an issue with the full build error. I try to get to it quick-ish but am quite busy at the moment!
+
 Requirements:
 
 * Rust toolchain
