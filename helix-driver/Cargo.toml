@@ -2,6 +2,11 @@
 name = "helix-driver"
 version = "0.1.0"
 edition = "2021"
+description = "Driver for building helix-compatible keybindings"
+license = "MIT"
+repository = "https://github.com/john-h-k/helix-zsh"
+authors = ["John Harry Kelly <johnharrykelly@gmail.com>"]
+
 
 [dependencies]
 arc-swap = "1.7.1"

@@ -8,7 +8,10 @@ use tokio::{
 
 use arc_swap::{access::Map, ArcSwap};
 use clap::Parser;
-use helix_core::{syntax, Selection};
+use helix_core::{
+    syntax::{self, config::Configuration},
+    Selection,
+};
 use helix_term::{
     commands,
     compositor::{self, Compositor},
@@ -21,7 +24,7 @@ use helix_term::{
 use helix_view::{
     editor::Action,
     graphics::Rect,
-    handlers::{completion::CompletionHandler, Handlers},
+    handlers::{completion::CompletionHandler, word_index, Handlers},
     input::{Event, KeyCode, KeyEvent, KeyModifiers},
     theme, Editor,
 };
@@ -350,7 +353,7 @@ async fn main_impl() {
     };
 
     let theme_loader = theme::Loader::new(&[]);
-    let syn_loader = syntax::Loader::new(crate::syntax::config::Configuration {
+    let syn_loader = syntax::Loader::new(Configuration {
         language: Vec::new(),
         language_server: HashMap::new(),
     })
@@ -371,6 +374,9 @@ async fn main_impl() {
         signature_hints: null_handler(),
         document_colors: null_handler(),
         auto_save: null_handler(),
+        word_index: word_index::Handler::spawn(),
+        pull_diagnostics: null_handler(),
+        pull_all_documents_diagnostics: null_handler(),
     };
 
     let mut editor = Editor::new(
