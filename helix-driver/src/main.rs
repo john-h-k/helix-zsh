@@ -373,6 +373,7 @@ async fn main_impl() {
         completions: CompletionHandler::new(null_handler()),
         signature_hints: null_handler(),
         document_colors: null_handler(),
+        document_links: null_handler(),
         auto_save: null_handler(),
         word_index: word_index::Handler::spawn(),
         pull_diagnostics: null_handler(),

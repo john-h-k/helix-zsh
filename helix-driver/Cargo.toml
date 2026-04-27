@@ -18,6 +18,9 @@ helix-loader = { git = "https://github.com/helix-editor/helix.git" }
 helix-term = { git = "https://github.com/helix-editor/helix.git" }
 helix-event = { git = "https://github.com/helix-editor/helix.git" }
 
+# Pin gix-actor to 0.40.0 because 0.40.1 upgraded to winnow 1.0 which is incompatible
+# with gix-object 0.57.0's use of winnow 0.7.x.
+gix-actor = "=0.40.0"
 toml = "0.8.19"
 tokio =  { version = "1.43.0", features = ["io-util"] }
 anyhow = "1.0.95"
